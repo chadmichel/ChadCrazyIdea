@@ -92,13 +92,25 @@ app.get('/db/:name', async (req, res) => {
   res.send('db opened');
 });
 
-api.get('/db/:name/tablesdef', DatabaseApi, 'listTables');
-api.get('/db/:name/tablesdef/:table/columns', DatabaseApi, 'listColumns');
 api.post('/db/:name/tablesdef', DatabaseApi, 'createTable');
+api.post('/db/:name/tablesdef/:table/index', DatabaseApi, 'createIndex');
+api.get('/db/:name/tablesdef', DatabaseApi, 'listTables');
+api.get('/db/:name/tablesdef/:table', DatabaseApi, 'getTableDef');
+
 api.get('/db/:name/tables/:table', DatabaseApi, 'rows');
 api.get('/db/:name/tables/:table/:id', DatabaseApi, 'getRow');
 api.post('/db/:name/tables/:table', DatabaseApi, 'insertRow');
 api.put('/db/:name/tables/:table/:id', DatabaseApi, 'updateRow');
+
+api.post('/db/:name/searchdef', DatabaseApi, 'createSearchTable');
+
+api.get('/db/:name/searchtables/:table', DatabaseApi, 'searchRows');
+api.get('/db/:name/searchtables/:table/:id', DatabaseApi, 'getSearchRow');
+api.post('/db/:name/searchtables/:table', DatabaseApi, 'insertSearchRow');
+api.put('/db/:name/searchtables/:table/:id', DatabaseApi, 'updateSearchRow');
+
+// api.get('/db/:name/searchdef', DatabaseApi, 'listTables');
+// api.get('/db/:name/searchdef/:table', DatabaseApi, 'getTableDef');
 
 app.listen(PORT, () => {
   logger.info(`⚡️[server]: Server is running at http://localhost:${PORT}`);

@@ -92,15 +92,15 @@ app.get('/db/:name', async (req, res) => {
   res.send('db opened');
 });
 
-api.post('/db/:name/tablesdef', DatabaseApi, 'createTable');
-api.post('/db/:name/tablesdef/:table/index', DatabaseApi, 'createIndex');
-api.get('/db/:name/tablesdef', DatabaseApi, 'listTables');
-api.get('/db/:name/tablesdef/:table', DatabaseApi, 'getTableDef');
+api.post('/v1/db/tablesdef', DatabaseApi, 'createTable');
+api.post('/v1/db/tablesdef/:table/index', DatabaseApi, 'createIndex');
+api.get('/v1/db/tablesdef', DatabaseApi, 'listTables');
+api.get('/v1/db/tablesdef/:table', DatabaseApi, 'getTableDef');
 
-api.get('/db/:name/tables/:table', DatabaseApi, 'rows');
-api.get('/db/:name/tables/:table/:id', DatabaseApi, 'getRow');
-api.post('/db/:name/tables/:table', DatabaseApi, 'insertRow');
-api.put('/db/:name/tables/:table/:id', DatabaseApi, 'updateRow');
+api.get('/v1/db/tables/:table', DatabaseApi, 'rows');
+api.get('/v1/db/tables/:table/:id', DatabaseApi, 'getRow');
+api.post('/v1/db/tables/:table', DatabaseApi, 'insertRow');
+api.put('/v1/db/tables/:table/:id', DatabaseApi, 'updateRow');
 
 api.post('/db/:name/searchdef', DatabaseApi, 'createSearchTable');
 

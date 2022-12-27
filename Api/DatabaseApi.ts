@@ -9,19 +9,25 @@ export class DatabaseApi extends BaseApi {
     super(app, context, logger, security);
   }
 
+  public getTenant(req: any) {
+    return req.headers.tenant;
+  }
+
   public async createTable(
     req: any,
     res: any
   ): Promise<DatabaseDefApiResponse> {
     var tableDef = req.body as TableDef;
-    this.logger.info('/db/' + req.params.name + '/tables');
-    await DatabaseHelper.createTable(req.params.name, tableDef);
+    var tenant = this.getTenant(req);
+
+    this.logger.info('/db/tables');
+    await DatabaseHelper.createTable(tenant, tableDef);
     return {
       status: 200,
       message: 'OK',
       definition: tableDef,
       link: req.originalUrl,
-      dataLink: `/db/${req.params.name}/tables/${tableDef.name}`,
+      dataLink: `/db/tables/${tableDef.name}`,
     };
   }
 
@@ -29,16 +35,14 @@ export class DatabaseApi extends BaseApi {
     req: any,
     res: any
   ): Promise<DatabaseDefApiResponse> {
-    var tableDef = await DatabaseHelper.getTableDef(
-      req.params.name,
-      req.params.table
-    );
+    var tenant = this.getTenant(req);
+    var tableDef = await DatabaseHelper.getMetadata(tenant, req.params.table);
     return {
       status: 200,
       message: 'OK',
       definition: tableDef,
       link: req.originalUrl,
-      dataLink: `/db/${req.params.name}/tables/${tableDef.name}`,
+      dataLink: `/db/tables/${tableDef.name}`,
     };
   }
 
@@ -60,13 +64,15 @@ export class DatabaseApi extends BaseApi {
   }
 
   public async listTables(req: any, res: any): Promise<DatabaseApiResponse> {
-    var tables = await DatabaseHelper.listTables(req.params.name);
+    var tenant = this.getTenant(req);
+    var tables = await DatabaseHelper.listTableDefs(tenant);
     var list = [];
+
     for (var item of tables) {
       list.push({
         name: item,
-        tableDefLink: `/db/${req.params.name}/tableDef/${item}`,
-        dataLink: `/db/${req.params.name}/tables/${item}/?page=0`,
+        tableDefLink: `/db/tableDef/${item}`,
+        dataLink: `/db/tables/${item}/?page=0`,
       });
     }
     return {
@@ -78,16 +84,18 @@ export class DatabaseApi extends BaseApi {
   }
 
   public async rows(req: any, res: any): Promise<DatabaseApiPageResponse> {
+    var tenant = this.getTenant(req);
     let pageSize = 100;
     this.logger.info(
-      `/db/${req.params.name}/tables/${req.params.table}/?page=${req.query.page}`
+      req.originalUrl + ' page=' + req.params.page + ' pageSize=' + pageSize
     );
 
     var data = await DatabaseHelper.pageRows(
-      req.params.name,
+      tenant,
       req.params.table,
       req.query.page,
-      pageSize
+      pageSize,
+      req.query.sortby
     );
     var nextPage = parseInt(req.params.page) + 1;
     var prevPage = parseInt(req.params.page) - 1;
@@ -119,16 +127,9 @@ export class DatabaseApi extends BaseApi {
   }
 
   public async insertRow(req: any, res: any): Promise<DatabaseApiResponse> {
-    var id = await DatabaseHelper.insertRow(
-      req.params.name,
-      req.params.table,
-      req.body
-    );
-    var row = await DatabaseHelper.getRow(
-      req.params.name,
-      req.params.table,
-      id
-    );
+    var tenant = this.getTenant(req);
+    var id = await DatabaseHelper.insertRow(tenant, req.params.table, req.body);
+    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
@@ -138,16 +139,17 @@ export class DatabaseApi extends BaseApi {
   }
 
   public async updateRow(req: any, res: any): Promise<DatabaseApiResponse> {
+    var tenant = this.getTenant(req);
     var id = await DatabaseHelper.updateRow(
-      req.params.name,
+      tenant,
       req.params.table,
       req.params.id,
       req.body
     );
     var row = await DatabaseHelper.getRow(
-      req.params.name,
+      tenant,
       req.params.table,
-      id
+      req.params.id
     );
     return {
       status: 200,
@@ -158,8 +160,9 @@ export class DatabaseApi extends BaseApi {
   }
 
   public async getRow(req: any, res: any) {
+    var tenant = this.getTenant(req);
     var row = await DatabaseHelper.getRow(
-      req.params.name,
+      tenant,
       req.params.table,
       req.params.id
     );
@@ -206,7 +209,7 @@ export class DatabaseApi extends BaseApi {
     var id = await DatabaseHelper.updateSearchRow(
       req.params.name,
       req.params.table,
-      req.params.id,
+      parseInt(req.params.id),
       req.body
     );
     return {
@@ -235,7 +238,7 @@ export class DatabaseApi extends BaseApi {
   ): Promise<DatabaseApiPageResponse> {
     let pageSize = 100;
     this.logger.info(
-      `/db/${req.params.name}/searchtables/${req.params.table}/?page=${req.query.page}&search=${req.query.search}`
+      `/db/${req.params.name}/searchtables/${req.params.table}/?page=${req.query.page}&search=${req.query.search}&sortBy=${req.query.sortBy}`
     );
 
     var data = await DatabaseHelper.pageSearchRows(
@@ -243,7 +246,8 @@ export class DatabaseApi extends BaseApi {
       req.params.table,
       req.query.page,
       pageSize,
-      req.query.search
+      req.query.search,
+      req.query.sortby
     );
     var nextPage = parseInt(req.params.page) + 1;
     var prevPage = parseInt(req.params.page) - 1;

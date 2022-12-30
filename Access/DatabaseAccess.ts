@@ -136,7 +136,7 @@ export class DatabaseHelper {
           reject(err);
         } else {
           if (rows.length == 0) {
-            reject('Table not found');
+            reject(`Table ${tableName} not found`);
           } else {
             var row = rows[0];
             var table: TableDef = {
@@ -151,6 +151,47 @@ export class DatabaseHelper {
       });
     });
     return promise;
+  }
+
+  static createColumnsArray(): ColumnDef[] {
+    var columns: ColumnDef[] = [];
+    columns.push({
+      name: 'id',
+      type: 'Text',
+      notNull: true,
+      primaryKey: true,
+      autoIncrement: false,
+      defaultValue: '',
+      indexed: false,
+    });
+    columns.push({
+      name: 'extra',
+      type: 'Text',
+      notNull: false,
+      primaryKey: false,
+      autoIncrement: false,
+      defaultValue: '',
+      indexed: false,
+    });
+    columns.push({
+      name: 'createdAt',
+      type: 'DateTime',
+      notNull: true,
+      primaryKey: false,
+      autoIncrement: false,
+      defaultValue: '',
+      indexed: false,
+    });
+    columns.push({
+      name: 'updatedAt',
+      type: 'DateTime',
+      notNull: true,
+      primaryKey: false,
+      autoIncrement: false,
+      defaultValue: '',
+      indexed: false,
+    });
+    return columns;
   }
 
   static async createTable(dbName: string, table: TableDef) {
@@ -182,39 +223,7 @@ export class DatabaseHelper {
         return;
       }
 
-      var columns: ColumnDef[] = [];
-      columns.push({
-        name: 'id',
-        type: 'Text',
-        notNull: true,
-        primaryKey: true,
-        autoIncrement: false,
-        defaultValue: '',
-      });
-      columns.push({
-        name: 'extra',
-        type: 'Text',
-        notNull: false,
-        primaryKey: false,
-        autoIncrement: false,
-        defaultValue: '',
-      });
-      columns.push({
-        name: 'createdAt',
-        type: 'DateTime',
-        notNull: true,
-        primaryKey: false,
-        autoIncrement: false,
-        defaultValue: '',
-      });
-      columns.push({
-        name: 'updatedAt',
-        type: 'DateTime',
-        notNull: true,
-        primaryKey: false,
-        autoIncrement: false,
-        defaultValue: '',
-      });
+      var columns = DatabaseHelper.createColumnsArray();
       for (var column of table.columns) {
         columns.push(column);
       }
@@ -444,9 +453,29 @@ export class DatabaseHelper {
               DatabaseHelper.Logger.error(err);
               reject(err);
             } else {
+              var items: DatabasePageItem[] = [];
+
+              for (var row of rows) {
+                var item: DatabasePageItem = {
+                  id: row.id,
+                  data: {},
+                };
+                for (var key in row) {
+                  if (
+                    DatabaseHelper.systemColumns.filter(
+                      (x) => x.name.toLowerCase() == key.toLowerCase()
+                    ).length == 0
+                  ) {
+                    item.data[key] = row[key];
+                  }
+                }
+                DatabaseHelper.addExtraColumns(item.data, row.extra);
+
+                items.push(item);
+              }
               resolve({
                 recordCount: count.cnt,
-                rows: rows,
+                items: items,
               });
             }
           });
@@ -457,7 +486,31 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async getRow(dbName: string, tableName: string, id: number) {
+  static async newRow(dbName: string, tableName: string) {
+    var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
+    var row: any = {};
+    for (var column of tableDef.columns) {
+      if (column.type == 'datetime') {
+        row[column.name] = new Date();
+      }
+      if (column.type == 'boolean') {
+        row[column.name] = false;
+      }
+      if (column.type == 'number') {
+        row[column.name] = 0;
+      }
+      if (column.type == 'text') {
+        row[column.name] = '';
+      }
+    }
+    return row;
+  }
+
+  static async getRow(
+    dbName: string,
+    tableName: string,
+    id: string
+  ): Promise<any> {
     var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
 
     var promise = new Promise(function (resolve, reject) {
@@ -469,32 +522,49 @@ export class DatabaseHelper {
           DatabaseHelper.Logger.error(err);
           reject(err);
         } else {
-          var result: any = {};
+          if (row == null) {
+            resolve(null);
+          } else {
+            var result: any = {};
 
-          for (var column of tableDef.columns) {
-            if (column.type == 'datetime') {
-              result[column.name] = new Date(row[column.name]);
+            for (var column of tableDef.columns) {
+              if (column.type == 'datetime') {
+                result[column.name] = new Date(row[column.name]);
+              }
+              if (column.type == 'number') {
+                result[column.name] = Number(row[column.name]);
+              }
+              if (column.type == 'boolean') {
+                result[column.name] = row[column.name] == 1;
+              }
+              if (column.type == 'text') {
+                result[column.name] = row[column.name];
+              }
             }
-            if (column.type == 'number') {
-              result[column.name] = Number(row[column.name]);
-            }
-            if (column.type == 'boolean') {
-              result[column.name] = row[column.name] == 1;
-            }
-            if (column.type == 'text') {
-              result[column.name] = row[column.name];
-            }
+            // var extra = JSON.parse(row.extra);
+            // for (var extraColumn in extra) {
+            //   result[extraColumn] = extra[extraColumn];
+            // }
+            DatabaseHelper.addExtraColumns(result, row.extra);
+            resolve(result);
           }
-          var extra = JSON.parse(row.extra);
-          for (var extraColumn in extra) {
-            result[extraColumn] = extra[extraColumn];
-          }
-          resolve(result);
         }
       });
       db.close();
     });
     return promise;
+  }
+
+  static addExtraColumns(row: any, json: string) {
+    var extra = JSON.parse(json);
+    for (var extraColumn in extra) {
+      if (
+        DatabaseHelper.systemColumns.filter((x) => x.name == extraColumn)
+          .length == 0
+      ) {
+        row[extraColumn] = extra[extraColumn];
+      }
+    }
   }
 
   static async insertRow(
@@ -526,21 +596,26 @@ export class DatabaseHelper {
       values += '?, ';
       params.push(id);
 
+      var writeTime = new Date().getTime();
+
       sql += 'createdat, ';
       values += '?, ';
-      params.push(new Date().getTime());
+      params.push(writeTime);
 
       sql += 'updatedat, ';
       values += '?, ';
-      params.push(new Date().getTime());
+      params.push(writeTime);
+      updateParams.push(writeTime);
       updates += ' updatedat = ?, ';
 
       for (var column of tableDef.columns) {
         sql += column.name + ', ';
         values += '?, ';
         params.push(row[column.name]);
-        updates += column.name + '= ?, ';
-        updateParams.push(row[column.name]);
+        if (row[column.name] != null) {
+          updates += column.name + '= ?, ';
+          updateParams.push(row[column.name]);
+        }
       }
       var extra: any = {};
       for (var key in row) {
@@ -551,19 +626,30 @@ export class DatabaseHelper {
       sql += 'extra) ';
       values += '?) ';
       params.push(JSON.stringify(extra));
+      if (extra.length > 0) {
+        updates += 'extra = ?, ';
+        updateParams.push(JSON.stringify(extra));
+      }
 
       sql = sql.slice(0, -2);
       values = values.slice(0, -2);
       updates = updates.slice(0, -2);
 
       sql += ') ' + values + ')';
-
       sql += updates;
+
       for (var param of updateParams) {
         params.push(param);
       }
 
       DatabaseHelper.Logger.info(sql);
+
+      var rawSql = sql;
+      for (var param of params) {
+        rawSql = rawSql.replace(/\?/i, param);
+      }
+      DatabaseHelper.Logger.info(rawSql);
+
       db.get(sql, params, (err, row) => {
         if (err) {
           DatabaseHelper.Logger.error(err);
@@ -579,21 +665,30 @@ export class DatabaseHelper {
 
   static async createSearchTable(
     dbName: string,
-    searchTableDef: SearchTableDef
-  ) {
-    var promise = new Promise(function (resolve, reject) {
+    searchTableDef: TableDef
+  ): Promise<TableDef> {
+    searchTableDef.type = 'search';
+    await DatabaseHelper.upsertMetadata(dbName, searchTableDef);
+
+    var columns = DatabaseHelper.createColumnsArray();
+    for (var column of searchTableDef.columns) {
+      columns.push(column);
+    }
+
+    var promise = new Promise<TableDef>(function (resolve, reject) {
       var db = DatabaseHelper.openDb(dbName);
       var sql =
         'CREATE VIRTUAL TABLE IF NOT EXISTS ' +
         searchTableDef.name +
-        '_search USING fts5(';
-      for (var column of searchTableDef.columns) {
+        ' USING fts5(';
+      for (var column of columns) {
         if (column.indexed) {
           sql += column.name + ', ';
         } else {
           sql += column.name + ' UNINDEXED, ';
         }
       }
+      sql = sql.slice(0, -2);
       sql += ')';
       DatabaseHelper.Logger.info(sql);
       db.exec(sql, (err) => {
@@ -601,7 +696,8 @@ export class DatabaseHelper {
           DatabaseHelper.Logger.error(err);
           reject(err);
         } else {
-          resolve(null);
+          searchTableDef.type = 'search';
+          resolve(searchTableDef);
         }
       });
     });
@@ -748,7 +844,7 @@ export class DatabaseHelper {
             } else {
               resolve({
                 recordCount: count[0].cnt,
-                rows: rows,
+                items: rows,
               });
             }
           });
@@ -762,5 +858,10 @@ export class DatabaseHelper {
 
 interface DatabasePageResult {
   recordCount: number;
-  rows: any[];
+  items: any[];
+}
+
+interface DatabasePageItem {
+  id: string;
+  data: any;
 }

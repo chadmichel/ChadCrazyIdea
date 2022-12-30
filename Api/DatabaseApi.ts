@@ -71,8 +71,8 @@ export class DatabaseApi extends BaseApi {
     for (var item of tables) {
       list.push({
         name: item,
-        tableDefLink: `/db/tableDef/${item}`,
-        dataLink: `/db/tables/${item}/?page=0`,
+        tableDefLink: `/db/tableDef/${item.name}`,
+        dataLink: `/db/tables/${item.name}/?page=0`,
       });
     }
     return {
@@ -102,10 +102,10 @@ export class DatabaseApi extends BaseApi {
     return {
       status: 200,
       message: 'OK',
-      data: data.rows,
+      data: data.items,
       link: req.originalUrl,
       nextLink:
-        data.rows.length < pageSize
+        data.items.length < pageSize
           ? ''
           : req.originalUrl.replace(
               'page=' + req.params.page,
@@ -119,14 +119,17 @@ export class DatabaseApi extends BaseApi {
               'page=' + prevPage
             ),
       page: req.query.page,
-      pageRows: data.rows.length,
+      pageRows: data.items.length,
       pageSize: pageSize,
       totalRows: data.recordCount,
       totalPages: Math.round(data.recordCount / pageSize + 0.5),
     };
   }
 
-  public async insertRow(req: any, res: any): Promise<DatabaseApiResponse> {
+  public async insertRow(
+    req: any,
+    res: any
+  ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
     var id = await DatabaseHelper.insertRow(tenant, req.params.table, req.body);
     var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
@@ -134,11 +137,15 @@ export class DatabaseApi extends BaseApi {
       status: 200,
       message: 'OK',
       data: row,
-      link: req.originalUrl + '/' + id,
+      link: req.originalUrl + id,
+      id: id,
     };
   }
 
-  public async updateRow(req: any, res: any): Promise<DatabaseApiResponse> {
+  public async updateRow(
+    req: any,
+    res: any
+  ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
     var id = await DatabaseHelper.updateRow(
       tenant,
@@ -156,49 +163,94 @@ export class DatabaseApi extends BaseApi {
       message: 'OK',
       data: row,
       link: req.originalUrl,
+      id: id,
     };
   }
 
-  public async getRow(req: any, res: any) {
+  public async getRow(
+    req: any,
+    res: any
+  ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
     var row = await DatabaseHelper.getRow(
       tenant,
       req.params.table,
       req.params.id
     );
+    if (row == null) {
+      return {
+        status: 404,
+        message: 'Not Found',
+        link: req.originalUrl,
+        id: req.params.id,
+        data: {},
+      };
+    }
     return {
       status: 200,
       message: 'OK',
       data: row,
       link: req.originalUrl,
+      id: req.params.id,
+    };
+  }
+
+  public async newRow(
+    req: any,
+    res: any
+  ): Promise<DatabaseResourceApiResponse> {
+    var tenant = this.getTenant(req);
+    var row = await DatabaseHelper.newRow(tenant, req.params.table);
+    if (row == null) {
+      return {
+        status: 404,
+        message: 'Not Found',
+        link: req.originalUrl,
+        id: req.params.id,
+        data: {},
+      };
+    }
+    return {
+      status: 200,
+      message: 'OK',
+      data: row,
+      link: req.originalUrl.replace('/new', ''),
+      id: '',
     };
   }
 
   public async createSearchTable(
     req: any,
     res: any
-  ): Promise<DatabaseMinApiResponse> {
-    var tableDef = req.body as SearchTableDef;
-    this.logger.info('/db/' + req.params.name + '/searchdef');
-    await DatabaseHelper.createSearchTable(req.params.name, tableDef);
+  ): Promise<DatabaseDefApiResponse> {
+    var tenant = this.getTenant(req);
+    var tableDef = req.body as TableDef;
+
+    this.logger.info('/db/searchdef');
+
+    tableDef = await DatabaseHelper.createSearchTable(tenant, tableDef);
     return {
       status: 200,
       message: 'OK',
+      definition: tableDef,
+      link: req.originalUrl,
+      dataLink: `/db/searchtables/${tableDef.name}`,
     };
   }
 
   public async insertSearchRow(
     req: any,
     res: any
-  ): Promise<DatabaseMinApiResponse> {
-    var id = await DatabaseHelper.insertSearchRow(
-      req.params.name,
-      req.params.table,
-      req.body
-    );
+  ): Promise<DatabaseResourceApiResponse> {
+    var tenant = this.getTenant(req);
+    var id = await DatabaseHelper.insertRow(tenant, req.params.table, req.body);
+    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
+      data: row,
+      link: req.originalUrl + id,
+      id: id,
     };
   }
 
@@ -254,10 +306,10 @@ export class DatabaseApi extends BaseApi {
     return {
       status: 200,
       message: 'OK',
-      data: data.rows,
+      data: data.items,
       link: req.originalUrl,
       nextLink:
-        data.rows.length < pageSize
+        data.items.length < pageSize
           ? ''
           : req.originalUrl.replace(
               'page=' + req.params.page,
@@ -271,7 +323,7 @@ export class DatabaseApi extends BaseApi {
               'page=' + prevPage
             ),
       page: req.query.page,
-      pageRows: data.rows.length,
+      pageRows: data.items.length,
       pageSize: pageSize,
       totalRows: data.recordCount,
       totalPages: Math.round(data.recordCount / pageSize + 0.5),
@@ -297,6 +349,14 @@ interface DatabaseApiResponse {
   message: string | undefined;
   data: any;
   link: string | undefined;
+}
+
+interface DatabaseResourceApiResponse {
+  status: number | undefined;
+  message: string | undefined;
+  data: any;
+  link: string | undefined;
+  id: string | undefined;
 }
 
 interface DatabaseApiPageResponse {

@@ -98,16 +98,17 @@ api.get('/v1/db/tablesdef', DatabaseApi, 'listTables');
 api.get('/v1/db/tablesdef/:table', DatabaseApi, 'getTableDef');
 
 api.get('/v1/db/tables/:table', DatabaseApi, 'rows');
+api.get('/v1/db/tables/:table/new', DatabaseApi, 'newRow');
 api.get('/v1/db/tables/:table/:id', DatabaseApi, 'getRow');
 api.post('/v1/db/tables/:table', DatabaseApi, 'insertRow');
 api.put('/v1/db/tables/:table/:id', DatabaseApi, 'updateRow');
 
-api.post('/db/:name/searchdef', DatabaseApi, 'createSearchTable');
+api.post('/db/searchdef', DatabaseApi, 'createSearchTable');
 
-api.get('/db/:name/searchtables/:table', DatabaseApi, 'searchRows');
-api.get('/db/:name/searchtables/:table/:id', DatabaseApi, 'getSearchRow');
-api.post('/db/:name/searchtables/:table', DatabaseApi, 'insertSearchRow');
-api.put('/db/:name/searchtables/:table/:id', DatabaseApi, 'updateSearchRow');
+api.get('/db/searchtables/:table', DatabaseApi, 'searchRows');
+api.get('/db/searchtables/:table/:id', DatabaseApi, 'getSearchRow');
+api.post('/db/searchtables/:table', DatabaseApi, 'insertSearchRow');
+api.put('/db/searchtables/:table/:id', DatabaseApi, 'updateSearchRow');
 
 // api.get('/db/:name/searchdef', DatabaseApi, 'listTables');
 // api.get('/db/:name/searchdef/:table', DatabaseApi, 'getTableDef');

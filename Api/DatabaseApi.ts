@@ -147,7 +147,7 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.updateRow(
+    var id = await DatabaseHelper.upsertRow(
       tenant,
       req.params.table,
       req.params.id,
@@ -243,7 +243,12 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.insertRow(tenant, req.params.table, req.body);
+    var id = await DatabaseHelper.upsertRow(
+      tenant,
+      req.params.table,
+      '',
+      req.body
+    );
     var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
     return {
       status: 200,
@@ -257,24 +262,30 @@ export class DatabaseApi extends BaseApi {
   public async updateSearchRow(
     req: any,
     res: any
-  ): Promise<DatabaseMinApiResponse> {
-    var id = await DatabaseHelper.updateSearchRow(
-      req.params.name,
+  ): Promise<DatabaseResourceApiResponse> {
+    var tenant = this.getTenant(req);
+    var id = await DatabaseHelper.upsertRow(
+      tenant,
       req.params.table,
-      parseInt(req.params.id),
+      req.params.id,
       req.body
     );
+    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
+      data: row,
+      link: req.originalUrl + id,
+      id: id,
     };
   }
 
   public async getSearchRow(req: any, res: any) {
-    var row = await DatabaseHelper.getSearchRow(
-      req.params.name,
+    var tenant = this.getTenant(req);
+    var row = await DatabaseHelper.getRow(
+      tenant,
       req.params.table,
-      parseInt(req.params.id)
+      req.params.id
     );
     return {
       status: 200,
@@ -293,8 +304,10 @@ export class DatabaseApi extends BaseApi {
       `/db/${req.params.name}/searchtables/${req.params.table}/?page=${req.query.page}&search=${req.query.search}&sortBy=${req.query.sortBy}`
     );
 
+    var tenant = this.getTenant(req);
+
     var data = await DatabaseHelper.pageSearchRows(
-      req.params.name,
+      tenant,
       req.params.table,
       req.query.page,
       pageSize,

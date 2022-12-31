@@ -530,21 +530,16 @@ export class DatabaseHelper {
             for (var column of tableDef.columns) {
               if (column.type == 'datetime') {
                 result[column.name] = new Date(row[column.name]);
-              }
-              if (column.type == 'number') {
+              } else if (column.type == 'number') {
                 result[column.name] = Number(row[column.name]);
-              }
-              if (column.type == 'boolean') {
+              } else if (column.type == 'boolean') {
                 result[column.name] = row[column.name] == 1;
-              }
-              if (column.type == 'text') {
+              } else if (column.type == 'text') {
+                result[column.name] = row[column.name];
+              } else {
                 result[column.name] = row[column.name];
               }
             }
-            // var extra = JSON.parse(row.extra);
-            // for (var extraColumn in extra) {
-            //   result[extraColumn] = extra[extraColumn];
-            // }
             DatabaseHelper.addExtraColumns(result, row.extra);
             resolve(result);
           }
@@ -573,24 +568,35 @@ export class DatabaseHelper {
     row: any
   ): Promise<string> {
     var id = uuidv4();
-    return await DatabaseHelper.updateRow(dbName, tableName, id, row);
+    return await DatabaseHelper.upsertRow(dbName, tableName, id, row);
   }
 
-  static async updateRow(
+  static async upsertRow(
     dbName: string,
     tableName: string,
     id: string,
     row: any
   ): Promise<string> {
+    if (id == null || id == '') {
+      id = uuidv4();
+    }
+
+    var useUpsert = false;
     var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
+    if (tableDef.type == 'search') {
+      useUpsert = false;
+    }
 
     var promise = new Promise<string>(function (resolve, reject) {
       var db = DatabaseHelper.openDb(dbName);
       var sql = 'INSERT INTO ' + tableName + ' (';
       var values = 'VALUES (';
       var updates = ' ON CONFLICT(id) DO UPDATE SET ';
+      if (!useUpsert) {
+        updates = ' ; UPDATE ' + tableName + ' SET';
+      }
       var params = [];
-      var updateParams = [];
+      var updateParams: any[] = [];
 
       sql += 'id, ';
       values += '?, ';
@@ -636,10 +642,13 @@ export class DatabaseHelper {
       updates = updates.slice(0, -2);
 
       sql += ') ' + values + ')';
-      sql += updates;
 
-      for (var param of updateParams) {
-        params.push(param);
+      if (useUpsert) {
+        sql += updates;
+
+        for (var param of updateParams) {
+          params.push(param);
+        }
       }
 
       DatabaseHelper.Logger.info(sql);
@@ -655,7 +664,21 @@ export class DatabaseHelper {
           DatabaseHelper.Logger.error(err);
           reject(err);
         } else {
-          resolve(id);
+          if (!useUpsert) {
+            updates += ' WHERE id = ?';
+            updateParams.push(id);
+            DatabaseHelper.Logger.info(rawSql);
+            db.get(updates, updateParams, (err: any, row: any) => {
+              if (err) {
+                DatabaseHelper.Logger.error(err);
+                reject(err);
+              } else {
+                resolve(id);
+              }
+            });
+          } else {
+            resolve(id);
+          }
         }
       });
       db.close();
@@ -704,109 +727,9 @@ export class DatabaseHelper {
     return promise;
   }
 
-  public static async insertSearchRow(
-    dbName: string,
-    searchTableName: string,
-    row: any
-  ): Promise<void> {
-    searchTableName = searchTableName + '_search';
-    var promise = new Promise<void>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
-      var sql = 'INSERT INTO ' + searchTableName + ' (';
-      var values = 'VALUES (';
-      var params = [];
-      for (var key in row) {
-        sql += key + ', ';
-        values += '?, ';
-        params.push(row[key]);
-      }
-      sql = sql.slice(0, -2);
-      values = values.slice(0, -2);
-      sql += ') ' + values + ')';
-      DatabaseHelper.Logger.info(sql);
-      db.get(sql, params, (err, row) => {
-        if (err) {
-          DatabaseHelper.Logger.error(err);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-      db.close();
-    });
-    return promise;
-  }
-
-  static async updateSearchRow(
-    dbName: string,
-    searchTableName: string,
-    id: number,
-    row: any
-  ): Promise<number> {
-    searchTableName = searchTableName + '_search';
-    var promise = new Promise<number>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
-      var sql = 'UPDATE ' + searchTableName + ' SET ';
-      var sql2 = 'UPDATE ' + searchTableName + ' SET ';
-      var params = [];
-      for (var key in row) {
-        sql += key + ' = ?, ';
-        sql2 += key + ' = ' + row[key] + ', ';
-        params.push(row[key]);
-      }
-      sql = sql.slice(0, -2);
-      sql += ' WHERE id = ?;';
-      params.push(id);
-
-      //sql += ' SELECT * FROM ' + searchTableName + ' WHERE id = ?';
-      //params.push(id);
-
-      sql2 = sql2.slice(0, -2);
-      sql2 += ' WHERE id = ' + id + ';';
-      //sql2 += ' SELECT * FROM ' + searchTableName + ' WHERE id = ' + id;
-
-      DatabaseHelper.Logger.info(sql);
-      DatabaseHelper.Logger.info(sql2);
-
-      db.all(sql, params, (err, row) => {
-        if (err) {
-          DatabaseHelper.Logger.error(err);
-          reject(err);
-        } else {
-          resolve(id);
-        }
-      });
-      db.close();
-    });
-    return promise;
-  }
-
-  static async getSearchRow(
-    dbName: string,
-    searchTableName: string,
-    id: number
-  ) {
-    searchTableName = searchTableName + '_search';
-    var promise = new Promise(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
-      var sql = 'SELECT * FROM ' + searchTableName + ' WHERE id = ?';
-      DatabaseHelper.Logger.info(sql);
-      db.all(sql, [id], (err, row) => {
-        if (err) {
-          DatabaseHelper.Logger.error(err);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-      db.close();
-    });
-    return promise;
-  }
-
   static async pageSearchRows(
     dbName: string,
-    searchTableName: string,
+    tableName: string,
     page: number = 0,
     pageSize: number = 100,
     searchTerm: string = '',
@@ -814,37 +737,50 @@ export class DatabaseHelper {
   ): Promise<DatabasePageResult> {
     var promise = new Promise<DatabasePageResult>(function (resolve, reject) {
       var db = DatabaseHelper.openDb(dbName);
-      searchTableName = searchTableName + '_search';
-      var sql = 'SELECT * FROM ' + searchTableName;
       var params: any[] = [];
-
+      var sql = 'SELECT * FROM ' + tableName;
       if (searchTerm != '' ?? searchTerm.length > 0) {
-        sql += ' WHERE ' + searchTableName + ' MATCH ?';
+        sql += ' WHERE ' + tableName + ' MATCH ? ';
         params.push(searchTerm);
       }
 
-      sql += ' ORDER BY ' + sortBy + ' ASC';
-      sql += ' LIMIT 100 OFFSET ' + page * pageSize;
+      sql += ' order by ' + sortBy;
+      sql += ' LIMIT ' + pageSize + ' OFFSET ' + page * pageSize;
 
       DatabaseHelper.Logger.info(sql);
-
       db.all(sql, params, (err, rows) => {
         if (err) {
           DatabaseHelper.Logger.error(err);
           reject(err);
         } else {
-          var sql2 = 'SELECT COUNT(*) as cnt FROM ' + searchTableName;
-          if (searchTerm != '' ?? searchTerm.length > 0) {
-            sql2 += ' WHERE ' + searchTableName + ' MATCH ?';
-          }
-          db.all(sql2, params, (err, count) => {
+          db.get('SELECT COUNT(*) as cnt FROM ' + tableName, (err, count) => {
             if (err) {
               DatabaseHelper.Logger.error(err);
               reject(err);
             } else {
+              var items: DatabasePageItem[] = [];
+
+              for (var row of rows) {
+                var item: DatabasePageItem = {
+                  id: row.id,
+                  data: {},
+                };
+                for (var key in row) {
+                  if (
+                    DatabaseHelper.systemColumns.filter(
+                      (x) => x.name.toLowerCase() == key.toLowerCase()
+                    ).length == 0
+                  ) {
+                    item.data[key] = row[key];
+                  }
+                }
+                DatabaseHelper.addExtraColumns(item.data, row.extra);
+
+                items.push(item);
+              }
               resolve({
-                recordCount: count[0].cnt,
-                items: rows,
+                recordCount: count.cnt,
+                items: items,
               });
             }
           });

@@ -1,12 +1,18 @@
 import { TableDef } from '../DatabaseDTOs/TableDef';
-import { DatabaseHelper } from '../Access/DatabaseAccess';
 import { BaseApi } from './BaseApi';
 import { IndexDef } from '../DatabaseDTOs/IndexDef';
 import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
+import { SqliteDatabaseAccess } from '../Access/SqliteDatabaseAccess';
 
 export class DatabaseApi extends BaseApi {
-  constructor(app: any, context: any, logger: any, security: any) {
-    super(app, context, logger, security);
+  constructor(
+    app: any,
+    context: any,
+    logger: any,
+    security: any,
+    db: SqliteDatabaseAccess
+  ) {
+    super(app, context, logger, security, db);
   }
 
   public getTenant(req: any) {
@@ -21,7 +27,7 @@ export class DatabaseApi extends BaseApi {
     var tenant = this.getTenant(req);
 
     this.logger.info('/db/tables');
-    await DatabaseHelper.createTable(tenant, tableDef);
+    await this.db.createTable(tenant, tableDef);
     return {
       status: 200,
       message: 'OK',
@@ -36,7 +42,7 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseDefApiResponse> {
     var tenant = this.getTenant(req);
-    var tableDef = await DatabaseHelper.getMetadata(tenant, req.params.table);
+    var tableDef = await this.db.getMetadata(tenant, req.params.table);
     return {
       status: 200,
       message: 'OK',
@@ -52,11 +58,7 @@ export class DatabaseApi extends BaseApi {
   ): Promise<DatabaseMinApiResponse> {
     var indexDef = req.body as IndexDef;
     this.logger.info('/db/' + req.params.name + '/tables');
-    await DatabaseHelper.createIndex(
-      req.params.name,
-      req.params.table,
-      indexDef
-    );
+    await this.db.createIndex(req.params.name, req.params.table, indexDef);
     return {
       status: 200,
       message: 'OK',
@@ -65,7 +67,7 @@ export class DatabaseApi extends BaseApi {
 
   public async listTables(req: any, res: any): Promise<DatabaseApiResponse> {
     var tenant = this.getTenant(req);
-    var tables = await DatabaseHelper.listTableDefs(tenant);
+    var tables = await this.db.listTableDefs(tenant);
     var list = [];
 
     for (var item of tables) {
@@ -90,15 +92,15 @@ export class DatabaseApi extends BaseApi {
       req.originalUrl + ' page=' + req.params.page + ' pageSize=' + pageSize
     );
 
-    var data = await DatabaseHelper.pageRows(
+    var data = await this.db.pageRows(
       tenant,
       req.params.table,
       req.query.page,
       pageSize,
       req.query.sortby
     );
-    var nextPage = parseInt(req.params.page) + 1;
-    var prevPage = parseInt(req.params.page) - 1;
+    var nextPage = parseInt(req.query.page) + 1;
+    var prevPage = parseInt(req.query.page) - 1;
     return {
       status: 200,
       message: 'OK',
@@ -131,8 +133,8 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.insertRow(tenant, req.params.table, req.body);
-    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
+    var id = await this.db.insertRow(tenant, req.params.table, req.body);
+    var row = await this.db.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
@@ -147,17 +149,13 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.upsertRow(
+    var id = await this.db.upsertRow(
       tenant,
       req.params.table,
       req.params.id,
       req.body
     );
-    var row = await DatabaseHelper.getRow(
-      tenant,
-      req.params.table,
-      req.params.id
-    );
+    var row = await this.db.getRow(tenant, req.params.table, req.params.id);
     return {
       status: 200,
       message: 'OK',
@@ -172,11 +170,7 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var row = await DatabaseHelper.getRow(
-      tenant,
-      req.params.table,
-      req.params.id
-    );
+    var row = await this.db.getRow(tenant, req.params.table, req.params.id);
     if (row == null) {
       return {
         status: 404,
@@ -200,7 +194,7 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var row = await DatabaseHelper.newRow(tenant, req.params.table);
+    var row = await this.db.newRow(tenant, req.params.table);
     if (row == null) {
       return {
         status: 404,
@@ -228,7 +222,7 @@ export class DatabaseApi extends BaseApi {
 
     this.logger.info('/db/searchdef');
 
-    tableDef = await DatabaseHelper.createSearchTable(tenant, tableDef);
+    tableDef = await this.db.createSearchTable(tenant, tableDef);
     return {
       status: 200,
       message: 'OK',
@@ -243,13 +237,8 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.upsertRow(
-      tenant,
-      req.params.table,
-      '',
-      req.body
-    );
-    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
+    var id = await this.db.upsertRow(tenant, req.params.table, '', req.body);
+    var row = await this.db.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
@@ -264,13 +253,13 @@ export class DatabaseApi extends BaseApi {
     res: any
   ): Promise<DatabaseResourceApiResponse> {
     var tenant = this.getTenant(req);
-    var id = await DatabaseHelper.upsertRow(
+    var id = await this.db.upsertRow(
       tenant,
       req.params.table,
       req.params.id,
       req.body
     );
-    var row = await DatabaseHelper.getRow(tenant, req.params.table, id);
+    var row = await this.db.getRow(tenant, req.params.table, id);
     return {
       status: 200,
       message: 'OK',
@@ -282,11 +271,7 @@ export class DatabaseApi extends BaseApi {
 
   public async getSearchRow(req: any, res: any) {
     var tenant = this.getTenant(req);
-    var row = await DatabaseHelper.getRow(
-      tenant,
-      req.params.table,
-      req.params.id
-    );
+    var row = await this.db.getRow(tenant, req.params.table, req.params.id);
     return {
       status: 200,
       message: 'OK',
@@ -306,7 +291,7 @@ export class DatabaseApi extends BaseApi {
 
     var tenant = this.getTenant(req);
 
-    var data = await DatabaseHelper.pageSearchRows(
+    var data = await this.db.pageSearchRows(
       tenant,
       req.params.table,
       req.query.page,

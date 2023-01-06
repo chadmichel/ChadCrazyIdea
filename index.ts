@@ -7,7 +7,7 @@ import passport from 'passport';
 import { v4 as uuidv4 } from 'uuid';
 import { Hosting } from './Hosting';
 import fs from 'fs';
-import { DatabaseHelper } from './Access/DatabaseAccess';
+import { SqliteDatabaseAccess } from './Access/SqliteDatabaseAccess';
 import { ApiHandler } from './ApiHandler';
 import { DatabaseApi } from './Api/DatabaseApi';
 
@@ -48,7 +48,7 @@ function errorHandler(err: any, req: any, res: any, next: any) {
   res.render('unhandled  error', { error: err });
 }
 
-DatabaseHelper.Logger = logger;
+ApiHandler.db = new SqliteDatabaseAccess(logger);
 ApiHandler.Logger = logger;
 ApiHandler.app = app;
 
@@ -88,7 +88,7 @@ app.get('/db', async (req, res) => {
 app.get('/db/:name', async (req, res) => {
   logger.info('/db/' + req.params.name);
 
-  var db = await DatabaseHelper.openOrCreate(req.params.name);
+  await ApiHandler.db.openOrCreate(req.params.name);
   res.send('db opened');
 });
 

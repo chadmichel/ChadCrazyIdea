@@ -8,10 +8,8 @@ import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
 import { TableDef } from '../DatabaseDTOs/TableDef';
 import { v4 as uuidv4 } from 'uuid';
 
-export class DatabaseHelper {
+export class SqliteDatabaseAccess {
   static path = '/Users/chadmichel/Personal/ChadCrazyIdea/dbs';
-
-  static Logger: Logger;
 
   static systemColumns: ColumnDef[] = [
     {
@@ -49,35 +47,37 @@ export class DatabaseHelper {
     },
   ];
 
-  static dbName(name: string) {
-    return DatabaseHelper.path + '/' + name + '.db';
+  constructor(private logger: Logger) {}
+
+  dbName(name: string) {
+    return SqliteDatabaseAccess.path + '/' + name + '.db';
   }
 
-  static openDb(name: string) {
-    var path = DatabaseHelper.dbName(name);
-    DatabaseHelper.Logger.info('Opening database: ' + path);
+  openDb(name: string) {
+    var path = this.dbName(name);
+    this.logger.info('Opening database: ' + path);
     var db = new Database(path);
     return db;
   }
 
-  static openOrCreate(dbName: string) {
-    var promise = new Promise(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  openOrCreate(dbName: string) {
+    var promise = new Promise((resolve, reject) => {
+      var db = this.openDb(dbName);
       db.close();
       resolve(null);
     });
     return promise;
   }
 
-  static async createMetadataTable(dbName: string) {
-    var promise = new Promise(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  createMetadataTable(dbName: string) {
+    var promise = new Promise((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql =
         'CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, type TEXT, columns Text, indexes Text)';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.run(sql, (err) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           resolve(null);
@@ -87,15 +87,15 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async upsertMetadata(dbName: string, table: TableDef) {
-    var promise = new Promise(function (resolve, reject) {
-      DatabaseHelper.createMetadataTable(dbName).then(() => {
-        var db = DatabaseHelper.openDb(dbName);
+  async upsertMetadata(dbName: string, table: TableDef) {
+    var promise = new Promise((resolve, reject) => {
+      this.createMetadataTable(dbName).then(() => {
+        var db = this.openDb(dbName);
         var sql =
           'INSERT INTO meta (name, type, columns, indexes)' +
           ' VALUES (?, ?, ?, ?) ON CONFLICT(name)' +
           ' DO UPDATE SET type = ?, columns = ?, indexes = ?';
-        DatabaseHelper.Logger.info(sql);
+        this.logger.info(sql);
         var params = [];
         // insert
         params.push(table.name);
@@ -109,7 +109,7 @@ export class DatabaseHelper {
 
         db.run(sql, params, (err) => {
           if (err) {
-            DatabaseHelper.Logger.error(err);
+            this.logger.error(err);
             reject(err);
           } else {
             resolve(null);
@@ -120,19 +120,16 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async getMetadata(
-    dbName: string,
-    tableName: string
-  ): Promise<TableDef> {
-    var promise = new Promise<TableDef>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  async getMetadata(dbName: string, tableName: string): Promise<TableDef> {
+    var promise = new Promise<TableDef>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql = 'SELECT * FROM meta where name = ?';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       var params = [];
       params.push(tableName);
       db.all(sql, params, (err, rows) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           if (rows.length == 0) {
@@ -153,7 +150,7 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static createColumnsArray(): ColumnDef[] {
+  createColumnsArray(): ColumnDef[] {
     var columns: ColumnDef[] = [];
     columns.push({
       name: 'id',
@@ -194,8 +191,8 @@ export class DatabaseHelper {
     return columns;
   }
 
-  static async createTable(dbName: string, table: TableDef) {
-    var promise = new Promise(function (resolve, reject) {
+  async createTable(dbName: string, table: TableDef) {
+    var promise = new Promise((resolve, reject) => {
       if (
         table.columns.filter((c) => c.name.toLowerCase() == 'id').length > 0
       ) {
@@ -223,13 +220,13 @@ export class DatabaseHelper {
         return;
       }
 
-      var columns = DatabaseHelper.createColumnsArray();
+      var columns = this.createColumnsArray();
       for (var column of table.columns) {
         columns.push(column);
       }
 
-      DatabaseHelper.upsertMetadata(dbName, table).then(() => {
-        var db = DatabaseHelper.openDb(dbName);
+      this.upsertMetadata(dbName, table).then(() => {
+        var db = this.openDb(dbName);
         var sql = 'CREATE TABLE IF NOT EXISTS ' + table.name + ' (';
         for (var column of columns) {
           sql += column.name + ' ' + column.type;
@@ -250,11 +247,11 @@ export class DatabaseHelper {
         sql = sql.slice(0, -2);
         sql += ')';
 
-        DatabaseHelper.Logger.info(sql);
+        this.logger.info(sql);
 
         db.exec(sql, (err) => {
           if (err) {
-            DatabaseHelper.Logger.error(err);
+            this.logger.error(err);
             reject(err);
           } else {
             resolve(null);
@@ -265,17 +262,17 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async isPrimaryKeyAutoIncrement(
+  async isPrimaryKeyAutoIncrement(
     dbName: string,
     tableName: string
   ): Promise<boolean> {
-    var promise = new Promise<boolean>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<boolean>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql = `SELECT "is-autoincrement" FROM sqlite_master WHERE tbl_name="${tableName}" AND sql LIKE "%AUTOINCREMENT%"`;
-      DatabaseHelper.Logger.info(sql);
-      db.all(sql, (err, rows) => {
+      this.logger.info(sql);
+      db.all(sql, (err: any, rows: null) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           resolve(rows != null);
@@ -286,15 +283,15 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async calculateTableDef(
+  async calculateTableDef(
     dbName: string,
     tableName: string
   ): Promise<TableDef> {
-    var promise = new Promise<TableDef>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<TableDef>((resolve, reject) => {
+      var db = this.openDb(dbName);
       db.all('PRAGMA table_info(' + tableName + ')', (err, rows) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           var columns = rows.map((row) => {
@@ -325,12 +322,10 @@ export class DatabaseHelper {
             columns.filter((c) => c.primaryKey).length > 0
           ) {
             var primaryKey = columns.filter((c) => c.primaryKey)[0];
-            DatabaseHelper.isPrimaryKeyAutoIncrement(dbName, tableName).then(
-              (result) => {
-                primaryKey.autoIncrement = true;
-                resolve(tableDef);
-              }
-            );
+            this.isPrimaryKeyAutoIncrement(dbName, tableName).then((result) => {
+              primaryKey.autoIncrement = true;
+              resolve(tableDef);
+            });
           } else {
             resolve(tableDef);
           }
@@ -341,14 +336,14 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async listTableDefs(dbName: string): Promise<TableDef[]> {
-    var promise = new Promise<TableDef[]>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  async listTableDefs(dbName: string): Promise<TableDef[]> {
+    var promise = new Promise<TableDef[]>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql = 'SELECT * FROM meta';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.all(sql, (err, rows) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           var list = rows.map((row) => {
@@ -367,14 +362,14 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async listTables(dbName: string): Promise<string[]> {
-    var promise = new Promise<string[]>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  async listTables(dbName: string): Promise<string[]> {
+    var promise = new Promise<string[]>((resolve, reject) => {
+      var db = this.openDb(dbName);
       db.all(
         'SELECT name FROM sqlite_master WHERE type="table"',
         (err, rows) => {
           if (err) {
-            DatabaseHelper.Logger.error(err);
+            this.logger.error(err);
             reject(err);
           } else {
             var list = rows.map((row) => row.name);
@@ -394,13 +389,9 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async createIndex(
-    dbName: string,
-    tableName: string,
-    indexDef: IndexDef
-  ) {
-    var promise = new Promise(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+  async createIndex(dbName: string, tableName: string, indexDef: IndexDef) {
+    var promise = new Promise((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql =
         'CREATE INDEX IF NOT EXISTS ' +
         indexDef.name +
@@ -412,10 +403,10 @@ export class DatabaseHelper {
       }
       sql = sql.slice(0, -2);
       sql += ')';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.exec(sql, (err) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           resolve(null);
@@ -425,15 +416,15 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async pageRows(
+  async pageRows(
     dbName: string,
     tableName: string,
     page: number = 0,
     pageSize: number = 100,
     sortBy: string = 'id'
   ): Promise<DatabasePageResult> {
-    var promise = new Promise<DatabasePageResult>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<DatabasePageResult>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql =
         'SELECT * FROM ' +
         tableName +
@@ -441,16 +432,17 @@ export class DatabaseHelper {
         sortBy +
         ' LIMIT 100 OFFSET ' +
         page * pageSize;
+      ``;
 
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.all(sql, (err, rows) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           db.get('SELECT COUNT(*) as cnt FROM ' + tableName, (err, count) => {
             if (err) {
-              DatabaseHelper.Logger.error(err);
+              this.logger.error(err);
               reject(err);
             } else {
               var items: DatabasePageItem[] = [];
@@ -462,14 +454,14 @@ export class DatabaseHelper {
                 };
                 for (var key in row) {
                   if (
-                    DatabaseHelper.systemColumns.filter(
+                    SqliteDatabaseAccess.systemColumns.filter(
                       (x) => x.name.toLowerCase() == key.toLowerCase()
                     ).length == 0
                   ) {
                     item.data[key] = row[key];
                   }
                 }
-                DatabaseHelper.addExtraColumns(item.data, row.extra);
+                SqliteDatabaseAccess.addExtraColumns(item.data, row.extra);
 
                 items.push(item);
               }
@@ -486,8 +478,8 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async newRow(dbName: string, tableName: string) {
-    var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
+  async newRow(dbName: string, tableName: string) {
+    var tableDef = await this.getMetadata(dbName, tableName);
     var row: any = {};
     for (var column of tableDef.columns) {
       if (column.type == 'datetime') {
@@ -506,20 +498,16 @@ export class DatabaseHelper {
     return row;
   }
 
-  static async getRow(
-    dbName: string,
-    tableName: string,
-    id: string
-  ): Promise<any> {
-    var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
+  async getRow(dbName: string, tableName: string, id: string): Promise<any> {
+    var tableDef = await this.getMetadata(dbName, tableName);
 
-    var promise = new Promise(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql = 'SELECT * FROM ' + tableName + ' WHERE id = ?';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.get(sql, [id], (err, row) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           if (row == null) {
@@ -540,7 +528,7 @@ export class DatabaseHelper {
                 result[column.name] = row[column.name];
               }
             }
-            DatabaseHelper.addExtraColumns(result, row.extra);
+            SqliteDatabaseAccess.addExtraColumns(result, row.extra);
             resolve(result);
           }
         }
@@ -553,25 +541,22 @@ export class DatabaseHelper {
   static addExtraColumns(row: any, json: string) {
     var extra = JSON.parse(json);
     for (var extraColumn in extra) {
-      if (
-        DatabaseHelper.systemColumns.filter((x) => x.name == extraColumn)
-          .length == 0
-      ) {
+      if (this.systemColumns.filter((x) => x.name == extraColumn).length == 0) {
         row[extraColumn] = extra[extraColumn];
       }
     }
   }
 
-  static async insertRow(
+  async insertRow(
     dbName: string,
     tableName: string,
     row: any
   ): Promise<string> {
     var id = uuidv4();
-    return await DatabaseHelper.upsertRow(dbName, tableName, id, row);
+    return await this.upsertRow(dbName, tableName, id, row);
   }
 
-  static async upsertRow(
+  async upsertRow(
     dbName: string,
     tableName: string,
     id: string,
@@ -582,13 +567,13 @@ export class DatabaseHelper {
     }
 
     var useUpsert = false;
-    var tableDef = await DatabaseHelper.getMetadata(dbName, tableName);
+    var tableDef = await this.getMetadata(dbName, tableName);
     if (tableDef.type == 'search') {
       useUpsert = false;
     }
 
-    var promise = new Promise<string>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<string>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql = 'INSERT INTO ' + tableName + ' (';
       var values = 'VALUES (';
       var updates = ' ON CONFLICT(id) DO UPDATE SET ';
@@ -651,26 +636,26 @@ export class DatabaseHelper {
         }
       }
 
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
 
       var rawSql = sql;
       for (var param of params) {
         rawSql = rawSql.replace(/\?/i, param);
       }
-      DatabaseHelper.Logger.info(rawSql);
+      this.logger.info(rawSql);
 
       db.get(sql, params, (err, row) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           if (!useUpsert) {
             updates += ' WHERE id = ?';
             updateParams.push(id);
-            DatabaseHelper.Logger.info(rawSql);
+            this.logger.info(rawSql);
             db.get(updates, updateParams, (err: any, row: any) => {
               if (err) {
-                DatabaseHelper.Logger.error(err);
+                this.logger.error(err);
                 reject(err);
               } else {
                 resolve(id);
@@ -686,20 +671,20 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async createSearchTable(
+  async createSearchTable(
     dbName: string,
     searchTableDef: TableDef
   ): Promise<TableDef> {
     searchTableDef.type = 'search';
-    await DatabaseHelper.upsertMetadata(dbName, searchTableDef);
+    await this.upsertMetadata(dbName, searchTableDef);
 
-    var columns = DatabaseHelper.createColumnsArray();
+    var columns = this.createColumnsArray();
     for (var column of searchTableDef.columns) {
       columns.push(column);
     }
 
-    var promise = new Promise<TableDef>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<TableDef>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var sql =
         'CREATE VIRTUAL TABLE IF NOT EXISTS ' +
         searchTableDef.name +
@@ -713,10 +698,10 @@ export class DatabaseHelper {
       }
       sql = sql.slice(0, -2);
       sql += ')';
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.exec(sql, (err) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           searchTableDef.type = 'search';
@@ -727,7 +712,7 @@ export class DatabaseHelper {
     return promise;
   }
 
-  static async pageSearchRows(
+  async pageSearchRows(
     dbName: string,
     tableName: string,
     page: number = 0,
@@ -735,8 +720,8 @@ export class DatabaseHelper {
     searchTerm: string = '',
     sortBy: string = 'id'
   ): Promise<DatabasePageResult> {
-    var promise = new Promise<DatabasePageResult>(function (resolve, reject) {
-      var db = DatabaseHelper.openDb(dbName);
+    var promise = new Promise<DatabasePageResult>((resolve, reject) => {
+      var db = this.openDb(dbName);
       var params: any[] = [];
       var sql = 'SELECT * FROM ' + tableName;
       if (searchTerm != '' ?? searchTerm.length > 0) {
@@ -747,15 +732,15 @@ export class DatabaseHelper {
       sql += ' order by ' + sortBy;
       sql += ' LIMIT ' + pageSize + ' OFFSET ' + page * pageSize;
 
-      DatabaseHelper.Logger.info(sql);
+      this.logger.info(sql);
       db.all(sql, params, (err, rows) => {
         if (err) {
-          DatabaseHelper.Logger.error(err);
+          this.logger.error(err);
           reject(err);
         } else {
           db.get('SELECT COUNT(*) as cnt FROM ' + tableName, (err, count) => {
             if (err) {
-              DatabaseHelper.Logger.error(err);
+              this.logger.error(err);
               reject(err);
             } else {
               var items: DatabasePageItem[] = [];
@@ -767,14 +752,14 @@ export class DatabaseHelper {
                 };
                 for (var key in row) {
                   if (
-                    DatabaseHelper.systemColumns.filter(
+                    SqliteDatabaseAccess.systemColumns.filter(
                       (x) => x.name.toLowerCase() == key.toLowerCase()
                     ).length == 0
                   ) {
                     item.data[key] = row[key];
                   }
                 }
-                DatabaseHelper.addExtraColumns(item.data, row.extra);
+                SqliteDatabaseAccess.addExtraColumns(item.data, row.extra);
 
                 items.push(item);
               }

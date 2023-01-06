@@ -3,10 +3,13 @@ import { Express } from 'express';
 import { BaseApi } from './Api/BaseApi';
 import { AmbientContext } from './AmbientContext';
 import { Security } from './Security';
+import { SqliteDatabaseAccess } from './Access/SqliteDatabaseAccess';
 
 export class ApiHandler {
   static Logger: Logger;
   static app: Express;
+
+  static db: SqliteDatabaseAccess;
 
   public async post(
     route: string,
@@ -28,8 +31,10 @@ export class ApiHandler {
           ApiHandler.app,
           context,
           ApiHandler.Logger,
-          security
+          security,
+          ApiHandler.db
         ) as any;
+
         const result = await service[serviceAction](req, res);
         res.send(result);
       } catch (err) {
@@ -59,7 +64,8 @@ export class ApiHandler {
           ApiHandler.app,
           context,
           ApiHandler.Logger,
-          security
+          security,
+          ApiHandler.db
         ) as any;
         const result = await service[serviceAction](req, res);
         res.send(result);
@@ -92,7 +98,8 @@ export class ApiHandler {
           ApiHandler.app,
           context,
           ApiHandler.Logger,
-          security
+          security,
+          ApiHandler.db
         ) as any;
         const result = await service[serviceAction](req, res);
         res.send(result);

@@ -96,9 +96,9 @@ api.post('/v1/db/tablesdef', DatabaseApi, 'createTable');
 api.post('/v1/db/tablesdef/:table/index', DatabaseApi, 'createIndex');
 api.get('/v1/db/tablesdef', DatabaseApi, 'listTables');
 api.get('/v1/db/tablesdef/:table', DatabaseApi, 'getTableDef');
+api.get('/v1/db/tablesdef/:table/new', DatabaseApi, 'newRow');
 
 api.get('/v1/db/tables/:table', DatabaseApi, 'rows');
-api.get('/v1/db/tables/:table/new', DatabaseApi, 'newRow');
 api.get('/v1/db/tables/:table/:id', DatabaseApi, 'getRow');
 api.post('/v1/db/tables/:table', DatabaseApi, 'insertRow');
 api.put('/v1/db/tables/:table/:id', DatabaseApi, 'updateRow');

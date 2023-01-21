@@ -7,8 +7,9 @@ import { IndexDef } from '../DatabaseDTOs/IndexDef';
 import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
 import { TableDef } from '../DatabaseDTOs/TableDef';
 import { v4 as uuidv4 } from 'uuid';
+import { IDatabaseAccess } from './IDatabaseAccess';
 
-export class SqliteDatabaseAccess {
+export class SqliteDatabaseAccess implements IDatabaseAccess {
   static path = '/Users/chadmichel/Personal/ChadCrazyIdea/dbs';
 
   static systemColumns: ColumnDef[] = [
@@ -566,7 +567,7 @@ export class SqliteDatabaseAccess {
       id = uuidv4();
     }
 
-    var useUpsert = false;
+    var useUpsert = true;
     var tableDef = await this.getMetadata(dbName, tableName);
     if (tableDef.type == 'search') {
       useUpsert = false;

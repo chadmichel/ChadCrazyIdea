@@ -3,6 +3,14 @@ import { BaseApi } from './BaseApi';
 import { IndexDef } from '../DatabaseDTOs/IndexDef';
 import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
 import { SqliteDatabaseAccess } from '../Access/SqliteDatabaseAccess';
+import {
+  DatabaseDefApiResponse,
+  DatabaseMinApiResponse,
+  DatabaseApiResponse,
+  DatabaseApiPageResponse,
+  DatabaseResourceApiResponse,
+} from '../DatabaseDTOs/DatabaseResponses';
+import { IDatabaseAccess } from '../Access/IDatabaseAccess';
 
 export class DatabaseApi extends BaseApi {
   constructor(
@@ -10,7 +18,7 @@ export class DatabaseApi extends BaseApi {
     context: any,
     logger: any,
     security: any,
-    db: SqliteDatabaseAccess
+    db: IDatabaseAccess
   ) {
     super(app, context, logger, security, db);
   }
@@ -49,19 +57,6 @@ export class DatabaseApi extends BaseApi {
       definition: tableDef,
       link: req.originalUrl,
       dataLink: `/db/tables/${tableDef.name}`,
-    };
-  }
-
-  public async createIndex(
-    req: any,
-    res: any
-  ): Promise<DatabaseMinApiResponse> {
-    var indexDef = req.body as IndexDef;
-    this.logger.info('/db/' + req.params.name + '/tables');
-    await this.db.createIndex(req.params.name, req.params.table, indexDef);
-    return {
-      status: 200,
-      message: 'OK',
     };
   }
 
@@ -327,46 +322,4 @@ export class DatabaseApi extends BaseApi {
       totalPages: Math.round(data.recordCount / pageSize + 0.5),
     };
   }
-}
-
-interface DatabaseDefApiResponse {
-  status: number | undefined;
-  message: string | undefined;
-  definition: any;
-  link: string | undefined;
-  dataLink: string | undefined;
-}
-
-interface DatabaseMinApiResponse {
-  status: number | undefined;
-  message: string | undefined;
-}
-
-interface DatabaseApiResponse {
-  status: number | undefined;
-  message: string | undefined;
-  data: any;
-  link: string | undefined;
-}
-
-interface DatabaseResourceApiResponse {
-  status: number | undefined;
-  message: string | undefined;
-  data: any;
-  link: string | undefined;
-  id: string | undefined;
-}
-
-interface DatabaseApiPageResponse {
-  status: number | undefined;
-  message: string | undefined;
-  data: any;
-  link: string | undefined;
-  nextLink: string | undefined;
-  previousLink: string | undefined;
-  page: number | undefined;
-  pageRows: number | undefined;
-  pageSize: number | undefined;
-  totalRows: number | undefined;
-  totalPages: number | undefined;
 }

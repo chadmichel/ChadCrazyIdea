@@ -7,20 +7,25 @@ import { IndexDef } from '../DatabaseDTOs/IndexDef';
 import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
 import { TableDef } from '../DatabaseDTOs/TableDef';
 import { v4 as uuidv4 } from 'uuid';
+import { Metadata } from '../DatabaseDTOs/Metadata';
 
 export interface IDatabaseAccess {
-  //#region "Table Definition"
+  //#region "Metadata"
 
   createMetadataTable(dbName: string): Promise<any>;
-  upsertMetadata(dbName: string, table: TableDef): Promise<any>;
-  getMetadata(dbName: string, tableName: string): Promise<TableDef>;
-  listTableDefs(dbName: string): Promise<TableDef[]>;
+  upsertMetadata(dbName: string, metadata: Metadata): Promise<any>;
+  getMetadata(dbName: string, name: string): Promise<Metadata>;
+  listMetadataDefsByType(dbName: string, type: string): Promise<Metadata[]>;
+
+  //#endregion "Metadata"
+
+  //#region "Tables"
 
   createTable(dbName: string, table: TableDef): Promise<any>;
   listTables(dbName: string): Promise<string[]>;
-
   newRow(dbName: string, tableName: string): any;
-  //#endregion "Table Definition"
+
+  //#endregion "Tables"
 
   //#region "CRUD"
 

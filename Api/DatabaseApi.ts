@@ -62,7 +62,7 @@ export class DatabaseApi extends BaseApi {
 
   public async listTables(req: any, res: any): Promise<DatabaseApiResponse> {
     var tenant = this.getTenant(req);
-    var tables = await this.db.listTableDefs(tenant);
+    var tables = await this.db.listMetadataDefsByType(tenant, 'table');
     var list = [];
 
     for (var item of tables) {

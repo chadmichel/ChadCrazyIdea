@@ -104,7 +104,6 @@ api.post('/v1/db/tables/:table', DatabaseApi, 'insertRow');
 api.put('/v1/db/tables/:table/:id', DatabaseApi, 'updateRow');
 
 api.post('/db/searchdef', DatabaseApi, 'createSearchTable');
-
 api.get('/db/searchtables/:table', DatabaseApi, 'searchRows');
 api.get('/db/searchtables/:table/:id', DatabaseApi, 'getSearchRow');
 api.post('/db/searchtables/:table', DatabaseApi, 'insertSearchRow');
@@ -112,6 +111,11 @@ api.put('/db/searchtables/:table/:id', DatabaseApi, 'updateSearchRow');
 
 // api.get('/db/:name/searchdef', DatabaseApi, 'listTables');
 // api.get('/db/:name/searchdef/:table', DatabaseApi, 'getTableDef');
+
+api.post('/v1/db/recorddef', DatabaseApi, 'createRecordDef');
+api.get('/v1/db/recorddef', DatabaseApi, 'listRecordTypes');
+api.get('/v1/db/recorddef/:table', DatabaseApi, 'getRecordDef');
+api.get('/v1/db/recorddef/:table/new', DatabaseApi, 'newRecord');
 
 app.listen(PORT, () => {
   logger.info(`⚡️[server]: Server is running at http://localhost:${PORT}`);

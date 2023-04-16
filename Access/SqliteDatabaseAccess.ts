@@ -8,6 +8,7 @@ import { SearchTableDef } from '../DatabaseDTOs/SearchTableDef';
 import { TableDef } from '../DatabaseDTOs/TableDef';
 import { v4 as uuidv4 } from 'uuid';
 import { IDatabaseAccess } from './IDatabaseAccess';
+import { Metadata } from '../DatabaseDTOs/Metadata';
 
 export class SqliteDatabaseAccess implements IDatabaseAccess {
   static path = '/Users/chadmichel/Personal/ChadCrazyIdea/dbs';
@@ -74,7 +75,7 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
     var promise = new Promise((resolve, reject) => {
       var db = this.openDb(dbName);
       var sql =
-        'CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, type TEXT, columns Text, indexes Text)';
+        'CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, type TEXT, columns Text, indexes Text, forms Text, notifications Text, extra Text, workflow Text)';
       this.logger.info(sql);
       db.run(sql, (err) => {
         if (err) {
@@ -88,14 +89,14 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
     return promise;
   }
 
-  async upsertMetadata(dbName: string, table: TableDef) {
+  async upsertMetadata(dbName: string, table: Metadata) {
     var promise = new Promise((resolve, reject) => {
       this.createMetadataTable(dbName).then(() => {
         var db = this.openDb(dbName);
         var sql =
-          'INSERT INTO meta (name, type, columns, indexes)' +
-          ' VALUES (?, ?, ?, ?) ON CONFLICT(name)' +
-          ' DO UPDATE SET type = ?, columns = ?, indexes = ?';
+          'INSERT INTO meta (name, type, columns, indexes, forms, notifications, extra, workflow)' +
+          ' VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name)' +
+          ' DO UPDATE SET type = ?, columns = ?, indexes = ?, forms = ?, notifications = ?, extra = ?, workflow = ?';
         this.logger.info(sql);
         var params = [];
         // insert
@@ -103,10 +104,18 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
         params.push(table.type);
         params.push(JSON.stringify(table.columns));
         params.push(JSON.stringify(table.indexes));
+        params.push(JSON.stringify(table.forms));
+        params.push(JSON.stringify(table.notifications));
+        params.push(JSON.stringify(table.extra));
+        params.push(JSON.stringify(table.workflow));
         // update
         params.push(table.type);
         params.push(JSON.stringify(table.columns));
         params.push(JSON.stringify(table.indexes));
+        params.push(JSON.stringify(table.forms));
+        params.push(JSON.stringify(table.notifications));
+        params.push(JSON.stringify(table.extra));
+        params.push(JSON.stringify(table.workflow));
 
         db.run(sql, params, (err) => {
           if (err) {
@@ -121,34 +130,98 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
     return promise;
   }
 
-  async getMetadata(dbName: string, tableName: string): Promise<TableDef> {
-    var promise = new Promise<TableDef>((resolve, reject) => {
+  async getMetadata(dbName: string, name: string): Promise<Metadata> {
+    var promise = new Promise<Metadata>((resolve, reject) => {
       var db = this.openDb(dbName);
       var sql = 'SELECT * FROM meta where name = ?';
       this.logger.info(sql);
       var params = [];
-      params.push(tableName);
+      params.push(name);
       db.all(sql, params, (err, rows) => {
         if (err) {
           this.logger.error(err);
           reject(err);
         } else {
           if (rows.length == 0) {
-            reject(`Table ${tableName} not found`);
+            reject(`Table ${name} not found`);
           } else {
             var row = rows[0];
-            var table: TableDef = {
+            var metadata: Metadata = {
               name: row.name,
               type: row.type,
               columns: JSON.parse(row.columns),
               indexes: JSON.parse(row.indexes),
+              forms: JSON.parse(row.forms),
+              notifications: JSON.parse(row.indexes),
+              workflow: JSON.parse(row.workflow),
+              extra: JSON.parse(row.extra),
             };
-            resolve(table);
+            resolve(metadata);
           }
         }
       });
     });
     return promise;
+  }
+
+  async listMetadataDefsByType(
+    dbName: string,
+    type: string
+  ): Promise<Metadata[]> {
+    var promise = new Promise<Metadata[]>((resolve, reject) => {
+      var db = this.openDb(dbName);
+      var sql = 'SELECT * FROM meta WHERE type = ?';
+      this.logger.info(sql);
+      db.all(sql, [type], (err, rows) => {
+        if (err) {
+          this.logger.error(err);
+          reject(err);
+        } else {
+          var list = rows.map((row) => {
+            var tableDef = {
+              name: row.name,
+              type: row.type,
+              columns: JSON.parse(row.columns),
+              indexes: JSON.parse(row.indexes),
+              forms: JSON.parse(row.forms),
+              notifications: JSON.parse(row.indexes),
+              workflow: JSON.parse(row.workflow),
+              extra: JSON.parse(row.extra),
+            };
+            return tableDef;
+          });
+          resolve(list);
+        }
+      });
+    });
+    return promise;
+  }
+
+  metadataToTableDef(metadata: Metadata): TableDef {
+    if (metadata.name == null) {
+      throw new Error('table must have a name');
+    }
+    if (metadata.type == null) {
+      throw new Error('table must have a type');
+    }
+    if (metadata.columns == null) {
+      throw new Error('table must have columns');
+    }
+    return {
+      name: metadata.name,
+      type: metadata.type,
+      columns: metadata.columns as ColumnDef[],
+      indexes: metadata.indexes as IndexDef[],
+    };
+  }
+
+  tableDefToMetadata(table: TableDef): Metadata {
+    return {
+      name: table.name,
+      type: table.type,
+      columns: table.columns as ColumnDef[],
+      indexes: table.indexes as IndexDef[],
+    };
   }
 
   createColumnsArray(): ColumnDef[] {
@@ -226,7 +299,8 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
         columns.push(column);
       }
 
-      this.upsertMetadata(dbName, table).then(() => {
+      var metadata = this.tableDefToMetadata(table);
+      this.upsertMetadata(dbName, metadata).then(() => {
         var db = this.openDb(dbName);
         var sql = 'CREATE TABLE IF NOT EXISTS ' + table.name + ' (';
         for (var column of columns) {
@@ -333,32 +407,6 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
         }
       });
       db.close();
-    });
-    return promise;
-  }
-
-  async listTableDefs(dbName: string): Promise<TableDef[]> {
-    var promise = new Promise<TableDef[]>((resolve, reject) => {
-      var db = this.openDb(dbName);
-      var sql = 'SELECT * FROM meta';
-      this.logger.info(sql);
-      db.all(sql, (err, rows) => {
-        if (err) {
-          this.logger.error(err);
-          reject(err);
-        } else {
-          var list = rows.map((row) => {
-            var tableDef = {
-              name: row.name,
-              type: row.type,
-              columns: JSON.parse(row.columns),
-              indexes: JSON.parse(row.indexes),
-            };
-            return tableDef;
-          });
-          resolve(list);
-        }
-      });
     });
     return promise;
   }
@@ -480,7 +528,8 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
   }
 
   async newRow(dbName: string, tableName: string) {
-    var tableDef = await this.getMetadata(dbName, tableName);
+    var metadata = await this.getMetadata(dbName, tableName);
+    var tableDef = this.metadataToTableDef(metadata);
     var row: any = {};
     for (var column of tableDef.columns) {
       if (column.type == 'datetime') {
@@ -500,7 +549,8 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
   }
 
   async getRow(dbName: string, tableName: string, id: string): Promise<any> {
-    var tableDef = await this.getMetadata(dbName, tableName);
+    var metadata = await this.getMetadata(dbName, tableName);
+    var tableDef = this.metadataToTableDef(metadata);
 
     var promise = new Promise((resolve, reject) => {
       var db = this.openDb(dbName);
@@ -568,7 +618,8 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
     }
 
     var useUpsert = true;
-    var tableDef = await this.getMetadata(dbName, tableName);
+    var metadata = await this.getMetadata(dbName, tableName);
+    var tableDef = this.metadataToTableDef(metadata);
     if (tableDef.type == 'search') {
       useUpsert = false;
     }

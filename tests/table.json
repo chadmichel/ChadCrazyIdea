@@ -71,7 +71,7 @@
 					}
 				],
 				"url": {
-					"raw": "http://localhost:8000/v1/db/tablesdef/table60",
+					"raw": "http://localhost:8000/v1/db/tablesdef/table70",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -81,7 +81,7 @@
 						"v1",
 						"db",
 						"tablesdef",
-						"table60"
+						"table70"
 					]
 				}
 			},
@@ -194,7 +194,7 @@
 					}
 				],
 				"url": {
-					"raw": "http://localhost:8000/v1/db/tables/table60/?page=0&sortby=createdat",
+					"raw": "http://localhost:8000/v1/db/tables/table70/?page=0&sortby=createdat",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -204,7 +204,7 @@
 						"v1",
 						"db",
 						"tables",
-						"table60",
+						"table70",
 						""
 					],
 					"query": [
@@ -465,7 +465,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:8000/v1/db/tables/table70/new",
+					"raw": "http://localhost:8000/v1/db/tablesdef/table70/new",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -474,7 +474,7 @@
 					"path": [
 						"v1",
 						"db",
-						"tables",
+						"tablesdef",
 						"table70",
 						"new"
 					]

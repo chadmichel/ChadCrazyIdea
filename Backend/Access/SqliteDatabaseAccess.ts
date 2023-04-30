@@ -9,9 +9,10 @@ import { TableDef } from '../DatabaseDTOs/TableDef';
 import { v4 as uuidv4 } from 'uuid';
 import { IDatabaseAccess } from './IDatabaseAccess';
 import { Metadata } from '../DatabaseDTOs/Metadata';
+import { Hosting } from '../Hosting';
 
 export class SqliteDatabaseAccess implements IDatabaseAccess {
-  static path = '/Users/chadmichel/Personal/ChadCrazyIdea/dbs';
+  static path = Hosting.dbBasePath;
 
   static systemColumns: ColumnDef[] = [
     {
@@ -143,7 +144,7 @@ export class SqliteDatabaseAccess implements IDatabaseAccess {
           reject(err);
         } else {
           if (rows.length == 0) {
-            reject(`Table ${name} not found`);
+            reject(`Metadata ${name} not found`);
           } else {
             var row = rows[0];
             var metadata: Metadata = {

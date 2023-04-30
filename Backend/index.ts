@@ -10,6 +10,7 @@ import fs from 'fs';
 import { SqliteDatabaseAccess } from './Access/SqliteDatabaseAccess';
 import { ApiHandler } from './ApiHandler';
 import { DatabaseApi } from './Api/DatabaseApi';
+import { RecordApi } from './Api/RecordApi';
 
 // rest of the code remains same
 const app = express();
@@ -112,10 +113,15 @@ api.put('/db/searchtables/:table/:id', DatabaseApi, 'updateSearchRow');
 // api.get('/db/:name/searchdef', DatabaseApi, 'listTables');
 // api.get('/db/:name/searchdef/:table', DatabaseApi, 'getTableDef');
 
-api.post('/v1/db/recorddef', DatabaseApi, 'createRecordDef');
-api.get('/v1/db/recorddef', DatabaseApi, 'listRecordTypes');
-api.get('/v1/db/recorddef/:table', DatabaseApi, 'getRecordDef');
-api.get('/v1/db/recorddef/:table/new', DatabaseApi, 'newRecord');
+api.post('/v1/db/recordsdef', RecordApi, 'createRecordDef');
+api.get('/v1/db/recordsdef', RecordApi, 'listRecordDefs');
+api.get('/v1/db/recordsdef/:table', RecordApi, 'getRecordDef');
+api.get('/v1/db/recordsdef/:table/new', RecordApi, 'newRecord');
+
+api.get('/v1/db/records/:recordDefName', RecordApi, 'records');
+api.get('/v1/db/records/:recordDefName/:id', RecordApi, 'getRecord');
+api.post('/v1/db/records/:recordDefName', RecordApi, 'insertRecord');
+api.put('/v1/db/records/:recordDefName/:id', RecordApi, 'updateRecord');
 
 app.listen(PORT, () => {
   logger.info(`⚡️[server]: Server is running at http://localhost:${PORT}`);

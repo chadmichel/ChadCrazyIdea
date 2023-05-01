@@ -25,3 +25,9 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+
+
+@angular-eslint/schematics              14.4.0 -> 15.2.1         ng update @angular-eslint/schematics
+      @angular/cli                            14.0.7 -> 15.2.6         ng update @angular/cli
+      @angular/core                           14.3.0 -> 15.2.7         ng update @angular/core
+      @angular/material                       7.0.0 -> 8.2.3           ng update @angular/material@8

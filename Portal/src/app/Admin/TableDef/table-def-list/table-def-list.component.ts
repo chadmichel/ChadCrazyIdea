@@ -7,6 +7,12 @@ import { TableModule } from 'primeng/table';
   styleUrls: ['./table-def-list.component.scss'],
 })
 export class TableDefListComponent implements OnInit {
+  products = [
+    {
+      code: 'a',
+      name: 'b',
+    },
+  ];
   constructor() {}
 
   ngOnInit(): void {}

@@ -9,7 +9,6 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { AccordionModule } from 'primeng/accordion';
 import { AutoCompleteModule } from 'primeng/autocomplete';
-import { AvatarModule } from 'primeng/avatar';
 import { BadgeModule } from 'primeng/badge';
 import { BreadcrumbModule } from 'primeng/breadcrumb';
 import { ButtonModule } from 'primeng/button';
@@ -28,7 +27,6 @@ import { VirtualScrollerModule } from 'primeng/virtualscroller';
 import { DialogModule } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DockModule } from 'primeng/dock';
-import { DragDropModule } from 'primeng/dragdrop';
 import { DropdownModule } from 'primeng/dropdown';
 import { DynamicDialogModule } from 'primeng/dynamicdialog';
 import { EditorModule } from 'primeng/editor';
@@ -50,14 +48,13 @@ import { MenubarModule } from 'primeng/menubar';
 import { MessageModule } from 'primeng/message';
 import { MessagesModule } from 'primeng/messages';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { OrderListModule } from 'primeng/orderlist';
 import { OrganizationChartModule } from 'primeng/organizationchart';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { PaginatorModule } from 'primeng/paginator';
 import { PanelModule } from 'primeng/panel';
 import { PanelMenuModule } from 'primeng/panelmenu';
 import { PasswordModule } from 'primeng/password';
-import { PickListModule } from 'primeng/picklist';
+
 import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { RatingModule } from 'primeng/rating';
@@ -93,9 +90,10 @@ import { AnimateModule } from 'primeng/animate';
 import { CardModule } from 'primeng/card';
 import { BlockUIModule } from 'primeng/blockui';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { HomeComponent } from './home/home.component';
 
 @NgModule({
-  declarations: [AppComponent, TableDefListComponent],
+  declarations: [AppComponent, TableDefListComponent, HomeComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,
@@ -123,7 +121,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
     DialogModule,
     DividerModule,
     DockModule,
-    DragDropModule,
     DropdownModule,
     DynamicDialogModule,
     EditorModule,
@@ -146,13 +143,11 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
     MessagesModule,
     MultiSelectModule,
     OrganizationChartModule,
-    OrderListModule,
     OverlayPanelModule,
     PaginatorModule,
     PanelModule,
     PanelMenuModule,
     PasswordModule,
-    PickListModule,
     ProgressSpinnerModule,
     ProgressBarModule,
     RadioButtonModule,

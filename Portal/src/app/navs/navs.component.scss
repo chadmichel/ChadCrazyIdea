@@ -18,17 +18,11 @@
     cursor: pointer;
 }
 
-account-button {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-}
-
-
 .menu-item {
     font-family: 'Roboto Mono', Roboto, sans-serif;
 }
 
-mat-toolbar {
-    font-family: 'Roboto Mono', Roboto, sans-serif;
+.account-button {
+    width: 50px;
+    max-width: 50px;
 }

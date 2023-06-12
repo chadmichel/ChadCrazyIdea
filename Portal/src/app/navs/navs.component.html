@@ -28,19 +28,15 @@
         <mat-icon *ngIf="link.icon">{{ link.icon }}</mat-icon>
       </a>
     </div>
-    <mat-menu #userMenu="matMenu" yPosition="above">
+    <mat-menu #userMenu="matMenu" class="userMenu">
       <button mat-menu-item>Item 1</button>
       <button mat-menu-item>Item 2</button>
     </mat-menu>
-    <button
-      fxFlex
-      fxLayoutAlign="flex-end center"
-      mat-button
-      class="account-button"
-      [matMenuTriggerFor]="userMenu"
-    >
-      <mat-icon>account_circle</mat-icon>
-    </button>
+    <div fxFlex fxLayoutAlign="flex-end center">
+      <button mat-button class="account-button" [matMenuTriggerFor]="userMenu">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    </div>
   </mat-toolbar>
 
   <mat-sidenav-container fxFlexFill class="example-container">

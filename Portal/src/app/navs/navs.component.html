@@ -1,0 +1,62 @@
+<div class="main-header">
+  <mat-toolbar color="primary" class="main-nav">
+    <div
+      fxShow="true"
+      fxHide.gt-sm="true"
+      fxFlex
+      fxLayoutAlign="flex-begin center"
+    >
+      <button mat-button class="menu-button" (click)="sidenav.toggle()">
+        <mat-icon>menu</mat-icon>
+      </button>
+    </div>
+    <span fxFlex fxLayoutAlign="center" fxShow="true" fxHide.gt-sm="true"
+      >CCI</span
+    >
+    <span fxFlex fxLayoutAlign="left" fxShow="true" fxHide.lt-md="true"
+      >CCI</span
+    >
+
+    <div fxFlex fxLayoutAlign="center" fxShow="true" fxHide.lt-md="true">
+      <a
+        class="menu-item"
+        *ngFor="let link of links"
+        href="#"
+        mat-button
+        (click)="navClick(link)"
+        >{{ link.label }}
+        <mat-icon *ngIf="link.icon">{{ link.icon }}</mat-icon>
+      </a>
+    </div>
+    <mat-menu #userMenu="matMenu" yPosition="above">
+      <button mat-menu-item>Item 1</button>
+      <button mat-menu-item>Item 2</button>
+    </mat-menu>
+    <button
+      fxFlex
+      fxLayoutAlign="flex-end center"
+      mat-button
+      class="account-button"
+      [matMenuTriggerFor]="userMenu"
+    >
+      <mat-icon>account_circle</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <mat-sidenav-container fxFlexFill class="example-container">
+    <mat-sidenav #sidenav fxLayout="column">
+      <div fxLayout="column">
+        <a
+          fxLayoutAlign="flex-start center"
+          class="menu-item"
+          *ngFor="let link of links"
+          href="#"
+          mat-button
+          (click)="navClick(link)"
+          >{{ link.label }}
+          <mat-icon *ngIf="link.icon">{{ link.icon }}</mat-icon>
+        </a>
+      </div>
+    </mat-sidenav>
+  </mat-sidenav-container>
+</div>

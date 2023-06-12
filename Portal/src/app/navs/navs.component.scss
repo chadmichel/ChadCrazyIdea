@@ -1,0 +1,34 @@
+.main-header {
+    margin: 0px;
+    padding: 0px;
+    height: 65vh;    
+}
+
+.main-nav {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;   
+ 
+}
+
+.menu-button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+account-button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+
+.menu-item {
+    font-family: 'Roboto Mono', Roboto, sans-serif;
+}
+
+mat-toolbar {
+    font-family: 'Roboto Mono', Roboto, sans-serif;
+}
